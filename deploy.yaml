@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: python-https-client
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: python-https-client
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 3
+  template:
+    metadata:
+      labels:
+        app: python-https-client
+    spec:
+      volumes:
+        - name: client-certs
+          secret:
+            secretName: python-https-test-client-certs
+        - name: server-certs
+          secret:
+            secretName: python-https-test-server-certs
+      containers:
+        - name: python-https-client
+          image: idanfrim/python-https-test-client
+          volumeMounts:
+            - mountPath: /etc/client
+              name: client-certs
+            - mountPath: /etc/server
+              name: server-certs
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: python-https-server
+  labels:
+    app: python-https-server
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8433
+      name: https
+  selector:
+    app: python-https-server
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: python-https-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: python-https-server
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 3
+  template:
+    metadata:
+      labels:
+        app: python-https-server
+    spec:
+      volumes:
+        - name: client-certs
+          secret:
+            secretName: python-https-test-client-certs
+        - name: server-certs
+          secret:
+            secretName: python-https-test-server-certs
+      containers:
+        - name: python-https-server
+          image: idanfrim/python-https-test-server
+          ports:
+            - containerPort: 8433
+          volumeMounts:
+            - mountPath: /etc/client
+              name: client-certs
+            - mountPath: /etc/server
+              name: server-certs
